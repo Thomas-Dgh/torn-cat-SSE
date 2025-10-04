@@ -2908,8 +2908,12 @@
         if (this.isSyncingCalls) return;
         this.isSyncingCalls = true;
 
-        // Get targets from intercepted data or DOM
-        const domTargets = this.getEnemyTargetsFromInterceptedData();
+        // Use cache for unified war data
+        const cachedData = await this.cache.get('unified-war-data', 
+          { war_id: this.currentWar.id, faction_id: this.factionId },
+          async () => {
+            // Get targets from intercepted data or DOM
+            const domTargets = this.getEnemyTargetsFromInterceptedData();
 
         // Simulate the API response structure with DOM data
         const data = {
