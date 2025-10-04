@@ -10,7 +10,7 @@
 (function() {
   'use strict';
   
-  const SSE_URL = "https://torncat-sse.onrender.com/events";
+  const SSE_URL = "https://torn-cat-sse.onrender.com/events";
   const evtSource = new EventSource(SSE_URL);
   
   evtSource.addEventListener("open", () => {
