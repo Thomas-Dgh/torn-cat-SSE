@@ -1,0 +1,22 @@
+{
+  "name": "torn-cat",
+  "version": "1.0.0",
+  "description": "C.A.T - Combat Assistance Toolkit - Optimized Edition",
+  "scripts": {
+    "dev": "supabase functions serve",
+    "deploy": "supabase functions deploy",
+    "deploy:optimized": "npm run build:functions && supabase functions deploy",
+    "build:functions": "echo 'Building optimized functions...'",
+    "db:reset": "supabase db reset",
+    "db:migrate": "supabase migration up",
+    "test": "echo 'No tests yet'",
+    "analyze:usage": "node scripts/analyze-usage.js"
+  },
+  "keywords": ["torn", "supabase", "edge-functions", "optimization"],
+  "author": "JESUUS",
+  "license": "MIT",
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "typescript": "^5.3.0"
+  }
+}
