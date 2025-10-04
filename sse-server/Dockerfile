@@ -4,4 +4,5 @@ COPY package*.json ./
 RUN npm install --omit=dev
 COPY . .
 EXPOSE 3000
+# Force rebuild - Simple SSE mode without PostgreSQL
 CMD ["node", "index.js"]
