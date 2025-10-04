@@ -5,24 +5,51 @@ import cors from "cors";
 const app = express();
 app.use(cors({ origin: "https://www.torn.com", methods: ["GET"] }));
 
-const pg = new Client({ 
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
-
-// Connect to PostgreSQL after server starts
+// PostgreSQL client - will be created when needed
+let pg = null;
 let pgConnected = false;
 
 async function connectPostgres() {
+  if (pgConnected) return; // Already connected
+  
   try {
+    // Create new client for each connection attempt
+    pg = new Client({ 
+      connectionString: process.env.DATABASE_URL,
+      ssl: {
+        rejectUnauthorized: false
+      }
+    });
+    
     await pg.connect();
     console.log("✅ Connected to PostgreSQL");
     await pg.query("LISTEN target_calls");
     pgConnected = true;
+    
+    // Set up notification listener
+    pg.on("notification", (msg) => {
+      try {
+        const data = JSON.parse(msg.payload);
+        for (const res of clients) {
+          res.write(`event: target_call\n`);
+          res.write(`data: ${JSON.stringify(data)}\n\n`);
+        }
+      } catch (err) {
+        console.error("Bad payload", err);
+      }
+    });
+    
+    // Handle connection errors
+    pg.on("error", (err) => {
+      console.error("PostgreSQL error:", err);
+      pgConnected = false;
+      // Try to reconnect after 5 seconds
+      setTimeout(connectPostgres, 5000);
+    });
+    
   } catch (error) {
     console.error("❌ PostgreSQL connection error:", error);
+    pgConnected = false;
     // Retry in 5 seconds
     setTimeout(connectPostgres, 5000);
   }
@@ -30,24 +57,13 @@ async function connectPostgres() {
 
 let clients = new Set();
 
-pg.on("notification", (msg) => {
-  try {
-    const data = JSON.parse(msg.payload);
-    for (const res of clients) {
-      res.write(`event: target_call\n`);
-      res.write(`data: ${JSON.stringify(data)}\n\n`);
-    }
-  } catch (err) {
-    console.error("Bad payload", err);
-  }
-});
-
 // Health check endpoint
 app.get("/", (req, res) => {
   res.json({ 
     status: "ok", 
     message: "SSE server running",
-    clients: clients.size
+    clients: clients.size,
+    postgres: pgConnected ? "connected" : "disconnected"
   });
 });
 
