@@ -13,11 +13,26 @@ async function connectPostgres() {
   if (pgConnected) return; // Already connected
   
   try {
-    // Create new client for each connection attempt
+    // Parse DATABASE_URL and force IPv4
+    const dbUrl = process.env.DATABASE_URL;
+    const urlParts = dbUrl.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
+    
+    if (!urlParts) {
+      throw new Error("Invalid DATABASE_URL format");
+    }
+    
+    const [, user, password, host, port, database] = urlParts;
+    
+    // Create new client with explicit config to avoid IPv6
     pg = new Client({ 
-      connectionString: process.env.DATABASE_URL,
+      user,
+      password,
+      host: host.replace('db.', 'db.'), // Ensure we use the hostname
+      port: parseInt(port),
+      database,
       ssl: {
-        rejectUnauthorized: false
+        rejectUnauthorized: false,
+        mode: 'require'
       }
     });
     
