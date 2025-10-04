@@ -4,7 +4,8 @@
 // @version      1.0
 // @description  Test SSE connection and manual calls
 // @match        https://www.torn.com/*
-// @grant        none
+// @grant        GM_xmlhttpRequest
+// @connect      torn-cat-sse.onrender.com
 // ==/UserScript==
 
 (function() {
@@ -88,30 +89,38 @@
     sendButton.disabled = true;
     sendButton.textContent = "Envoi...";
     
-    try {
-      const response = await fetch(TRIGGER_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          caller_id: parseInt(callerId),
-          target_id: parseInt(targetId)
-        })
-      });
-      
-      const result = await response.json();
-      console.log("[SSE] Call envoyé:", result);
-      
-      sendButton.textContent = `Envoyé à ${result.sent_to} clients`;
-      setTimeout(() => {
-        sendButton.textContent = "Envoyer Call Test";
+    GM_xmlhttpRequest({
+      method: "POST",
+      url: TRIGGER_URL,
+      headers: {
+        "Content-Type": "application/json"
+      },
+      data: JSON.stringify({
+        caller_id: parseInt(callerId),
+        target_id: parseInt(targetId)
+      }),
+      onload: function(response) {
+        try {
+          const result = JSON.parse(response.responseText);
+          console.log("[SSE] Call envoyé:", result);
+          
+          sendButton.textContent = `Envoyé à ${result.sent_to} clients`;
+          setTimeout(() => {
+            sendButton.textContent = "Envoyer Call Test";
+            sendButton.disabled = false;
+          }, 2000);
+        } catch (e) {
+          console.error("[SSE] Erreur parsing:", e);
+          sendButton.textContent = "Erreur!";
+          sendButton.disabled = false;
+        }
+      },
+      onerror: function(error) {
+        console.error("[SSE] Erreur d'envoi:", error);
+        sendButton.textContent = "Erreur!";
         sendButton.disabled = false;
-      }, 2000);
-      
-    } catch (error) {
-      console.error("[SSE] Erreur d'envoi:", error);
-      sendButton.textContent = "Erreur!";
-      sendButton.disabled = false;
-    }
+      }
+    });
   });
   
   // Animation CSS
