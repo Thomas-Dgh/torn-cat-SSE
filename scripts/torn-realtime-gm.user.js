@@ -18,6 +18,7 @@
   
   let pollInterval = null;
   let lastCallId = GM_getValue('lastCallId', 0);
+  let warInitialized = false;
   
   // Create UI
   const panel = document.createElement('div');
@@ -220,6 +221,37 @@
     });
   });
   
+  // Initialize test war
+  function initializeWar() {
+    GM_xmlhttpRequest({
+      method: "POST",
+      url: `${SUPABASE_URL}/rest/v1/wars`,
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates"
+      },
+      data: JSON.stringify({
+        war_id: 1,
+        faction_a_id: 1000,
+        faction_b_id: 2000,
+        faction_a_name: "Test Faction A",
+        faction_b_name: "Test Faction B",
+        is_active: true
+      }),
+      onload: function(response) {
+        if (response.status === 201 || response.status === 200) {
+          console.log("[GM] War initialized");
+          warInitialized = true;
+        }
+      },
+      onerror: function(error) {
+        console.error("[GM] War init error:", error);
+      }
+    });
+  }
+  
   // Load initial data
   function loadRecentCalls() {
     GM_xmlhttpRequest({
@@ -254,6 +286,7 @@
   
   // Initialize
   console.log("[Realtime GM] Script loaded!");
-  loadRecentCalls();
+  initializeWar(); // Create test war first
+  setTimeout(loadRecentCalls, 1000); // Then load calls
   
 })();
