@@ -5,9 +5,28 @@ import cors from "cors";
 const app = express();
 app.use(cors({ origin: "https://www.torn.com", methods: ["GET"] }));
 
-const pg = new Client({ connectionString: process.env.DATABASE_URL });
-await pg.connect();
-await pg.query("LISTEN target_calls");
+const pg = new Client({ 
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
+
+// Connect to PostgreSQL after server starts
+let pgConnected = false;
+
+async function connectPostgres() {
+  try {
+    await pg.connect();
+    console.log("✅ Connected to PostgreSQL");
+    await pg.query("LISTEN target_calls");
+    pgConnected = true;
+  } catch (error) {
+    console.error("❌ PostgreSQL connection error:", error);
+    // Retry in 5 seconds
+    setTimeout(connectPostgres, 5000);
+  }
+}
 
 let clients = new Set();
 
@@ -21,6 +40,15 @@ pg.on("notification", (msg) => {
   } catch (err) {
     console.error("Bad payload", err);
   }
+});
+
+// Health check endpoint
+app.get("/", (req, res) => {
+  res.json({ 
+    status: "ok", 
+    message: "SSE server running",
+    clients: clients.size
+  });
 });
 
 app.get("/events", (req, res) => {
@@ -41,4 +69,8 @@ app.get("/events", (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("✅ SSE server running on", PORT));
+app.listen(PORT, () => {
+  console.log("✅ SSE server running on", PORT);
+  // Start PostgreSQL connection after server is up
+  connectPostgres();
+});
